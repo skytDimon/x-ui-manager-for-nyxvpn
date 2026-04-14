@@ -39,7 +39,7 @@ async def command_start_handler(message: Message) -> None:
     # здесь должен быть реальный публичный HTTPS адрес
     # При локальном тесте Telegram API может потребовать HTTPS.
     # В production здесь должен быть ваш HTTPS домен.
-    webapp_url = "https://your-domain.com/"  # ЗАМЕНИТЕ НА ВАШ ДОМЕН
+    webapp_url = config.webapp_url
 
     # Кнопка открытия Web App
     web_app_btn = InlineKeyboardButton(
