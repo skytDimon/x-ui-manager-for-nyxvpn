@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Manager</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --surface: #1a1a1a;
+            --surface-2: #222222;
+            --border: #2a2a2a;
+            --text: #e5e5e5;
+            --text-dim: #888888;
+            --accent: #4f8cff;
+            --accent-hover: #3a6fd8;
+            --red: #ef4444;
+            --green: #22c55e;
+            --yellow: #eab308;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        input {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            outline: none;
+        }
+        input:focus {
+            border-color: var(--accent);
+        }
+        input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .tab-btn {
+            color: var(--text-dim);
+            font-size: 13px;
+            letter-spacing: 0.02em;
+            transition: color 0.15s;
+            position: relative;
+            padding-bottom: 12px;
+        }
+        .tab-btn.active {
+            color: var(--text);
+            font-weight: 600;
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1.5px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+
+        .duration-btn {
+            background: var(--surface);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+            transition: all 0.15s;
+            font-size: 13px;
+        }
+        .duration-btn.selected {
+            background: var(--accent);
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+        }
+
+        .client-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            transition: border-color 0.15s;
+        }
+        .client-card:hover {
+            border-color: #3a3a3a;
+        }
+
+        .toggle-track {
+            width: 36px;
+            height: 20px;
+            border-radius: 10px;
+            background: var(--border);
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-track.on {
+            background: var(--accent);
+        }
+        .toggle-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fff;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+        .toggle-track.on .toggle-thumb {
+            transform: translateX(16px);
+        }
+
+        .btn-sm {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 6px;
+            transition: all 0.15s;
+        }
+        .btn-accent {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-accent:hover {
+            background: var(--accent-hover);
+        }
+        .btn-danger {
+            background: transparent;
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+        .btn-danger:hover {
+            background: var(--red);
+            color: #fff;
+        }
+
+        #modal-backdrop {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-sheet {
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+            transform: translateY(100%);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade {
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .expiry-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="flex flex-col min-h-screen">
+
+        <div class="flex px-5 pt-4 sticky top-0 z-10 border-b" style="border-color: var(--border); background: var(--bg);">
+            <button class="tab-btn active flex-1 text-center" data-target="tab-dashboard">Дашборд</button>
+            <button class="tab-btn flex-1 text-center" data-target="tab-create">Создать</button>
+            <button class="tab-btn flex-1 text-center" data-target="tab-clients">Клиенты</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto scrollbar-hide">
+
+            <!-- === TAB: DASHBOARD === -->
+            <div id="tab-dashboard" class="tab-content p-5 max-w-md mx-auto">
+                <h1 class="text-lg font-semibold mb-5">Сводка</h1>
+
+                <div id="dashboard-loader" class="flex justify-center py-12">
+                    <div class="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style="border-color: var(--accent); border-top-color: transparent;"></div>
+                </div>
+
+                <div id="dashboard-content" class="hidden space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="stat-card rounded-xl p-4">
+                            <p class="text-xs mb-1" style="color: var(--text-dim);">Всего</p>
+                            <p class="text-2xl font-bold" id="stat-total">0</p>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <p class="text-xs mb-1" style="color: var(--green);">Активных</p>
+                            <p class="text-2xl font-bold" id="stat-active">0</p>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <p class="text-xs mb-1" style="color: var(--red);">Истекших</p>
+                            <p class="text-2xl font-bold" id="stat-expired">0</p>
+                        </div>
+                        <div class="stat-card rounded-xl p-4">
+                            <p class="text-xs mb-1" style="color: var(--text-dim);">Трафик</p>
+                            <p class="text-2xl font-bold" id="stat-traffic">0 <span class="text-sm font-normal" style="color: var(--text-dim);">GB</span></p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <h2 class="text-sm font-medium mb-3" style="color: var(--text-dim);">Скоро истекают</h2>
+                        <div id="expiring-soon" class="space-y-2">
+                            <p class="text-center py-4 text-sm" style="color: var(--text-dim);">Все в порядке</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === TAB: CREATE === -->
+            <div id="tab-create" class="tab-content hidden p-5 max-w-md mx-auto">
+                <div id="form-section" class="space-y-5">
+                    <div>
+                        <h1 class="text-lg font-semibold mb-1">Новый клиент</h1>
+                        <p class="text-xs" style="color: var(--text-dim);">Будет добавлен на все ноды</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-xs font-medium" style="color: var(--text-dim);">Имя</label>
+                        <input type="text" id="username" placeholder="username"
+                               class="w-full rounded-lg px-3 py-2.5 text-sm" />
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-xs font-medium" style="color: var(--text-dim);">Срок</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button class="duration-btn selected rounded-lg py-2" data-days="0">Навсегда</button>
+                            <button class="duration-btn rounded-lg py-2" data-days="3">3 дня</button>
+                            <button class="duration-btn rounded-lg py-2" data-days="15">15 дней</button>
+                            <button class="duration-btn rounded-lg py-2" data-days="30">30 дней</button>
+                        </div>
+                    </div>
+
+                    <p id="error-message" class="text-sm hidden" style="color: var(--red);"></p>
+
+                    <button id="submit-btn"
+                            class="w-full rounded-lg py-2.5 text-sm font-semibold transition-colors"
+                            style="background: var(--accent); color: #fff;">
+                        <span id="btn-text">Создать</span>
+                        <span id="btn-loader" class="hidden">
+                            <span class="inline-block w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style="border-color: #fff; border-top-color: transparent;"></span>
+                        </span>
+                    </button>
+                </div>
+
+                <div id="success-section" class="hidden animate-fade space-y-4 pt-2">
+                    <div class="text-center py-3">
+                        <div class="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-3" style="background: rgba(34,197,94,0.15);">
+                            <svg class="w-5 h-5" style="color: var(--green);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-base font-semibold" id="success-title">Клиент добавлен</h2>
+                    </div>
+
+                    <div class="p-3 rounded-lg" style="background: var(--surface); border: 1px solid var(--border);">
+                        <p class="text-xs mb-2" style="color: var(--text-dim);">Ссылка подписки</p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="sub-url" readonly
+                                   class="flex-1 rounded px-2 py-1.5 text-xs truncate" style="background: var(--surface-2); border-color: var(--border);" />
+                            <button id="copy-btn" class="p-1.5 rounded transition-colors hover:bg-white/5" style="color: var(--accent);">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="reset-create-btn" class="w-full text-xs py-2 transition-colors" style="color: var(--accent);">
+                        Добавить еще
+                    </button>
+                </div>
+            </div>
+
+            <!-- === TAB: CLIENTS === -->
+            <div id="tab-clients" class="tab-content hidden p-5 max-w-md mx-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h1 class="text-lg font-semibold">Клиенты</h1>
+                    <button id="refresh-clients-btn" class="p-1.5 rounded transition-colors hover:bg-white/5" style="color: var(--text-dim);">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mb-4">
+                    <input type="text" id="search-input" placeholder="Поиск по имени..."
+                           class="w-full rounded-lg px-3 py-2 text-sm" />
+                </div>
+
+                <div id="clients-loader" class="flex justify-center py-12">
+                    <div class="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin" style="border-color: var(--accent); border-top-color: transparent;"></div>
+                </div>
+
+                <div id="clients-container" class="space-y-3 pb-8 hidden"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- === EXTEND / DELETE MODAL === -->
+    <div id="modal-backdrop" class="fixed inset-0 z-40 hidden" style="opacity: 0;">
+        <div id="modal-sheet" class="modal-sheet fixed bottom-0 left-0 right-0 max-w-md mx-auto rounded-t-xl p-5 space-y-4 z-50">
+            <div class="flex justify-between items-center">
+                <h3 class="text-base font-semibold" id="modal-title">Действие</h3>
+                <button id="close-modal-btn" class="p-1 -mr-1" style="color: var(--text-dim);">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <p class="text-sm" id="modal-client-name" style="color: var(--text-dim);">Клиент: <span>...</span></p>
+
+            <div id="modal-extend-section" class="space-y-3">
+                <p class="text-xs font-medium" style="color: var(--text-dim);">Продлить на</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="3">+3 дня</button>
+                    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="15">+15 дней</button>
+                    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="30">+30 дней</button>
+                </div>
+            </div>
+
+            <div id="modal-delete-section" class="pt-2">
+                <button id="modal-delete-btn" class="btn-sm btn-danger rounded-lg py-2 w-full">Удалить клиента</button>
+            </div>
+
+            <p id="modal-error" class="text-sm hidden" style="color: var(--red);"></p>
+        </div>
+    </div>
+
+    <template id="client-card-template">
+        <div class="client-card rounded-xl p-4 space-y-3">
+            <div class="flex items-start justify-between">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium text-sm truncate client-name"></span>
+                        <span class="expiry-badge client-expiry-badge"></span>
+                    </div>
+                    <p class="text-xs mt-1 client-expiry" style="color: var(--text-dim);"></p>
+                </div>
+                <div class="toggle-track ml-3 flex-shrink-0" title="Включить/выключить">
+                    <div class="toggle-thumb"></div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between pt-2" style="border-top: 1px solid var(--border);">
+                <span class="text-xs client-traffic" style="color: var(--text-dim);"></span>
+                <button class="extend-btn btn-sm btn-accent">Продлить</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="expiring-card-template">
+        <div class="flex items-center justify-between py-2" style="border-bottom: 1px solid var(--border);">
+            <span class="text-sm expiring-name"></span>
+            <span class="expiry-badge expiring-badge"></span>
+        </div>
+    </template>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let selectedDaysCreate = 0;
+        let currentClientUuid = null;
+        let currentClientName = null;
+        let allClients = [];
+
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        const durationBtns = document.querySelectorAll('.duration-btn');
+        const usernameInput = document.getElementById('username');
+        const submitBtn = document.getElementById('submit-btn');
+        const formSection = document.getElementById('form-section');
+        const successSection = document.getElementById('success-section');
+        const resetCreateBtn = document.getElementById('reset-create-btn');
+
+        const searchInput = document.getElementById('search-input');
+        const refreshBtn = document.getElementById('refresh-clients-btn');
+        const clientsLoader = document.getElementById('clients-loader');
+        const clientsContainer = document.getElementById('clients-container');
+        const clientTemplate = document.getElementById('client-card-template');
+
+        const modalBackdrop = document.getElementById('modal-backdrop');
+        const modalSheet = document.getElementById('modal-sheet');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const modalExtendBtns = document.querySelectorAll('.modal-extend-btn');
+        const modalDeleteBtn = document.getElementById('modal-delete-btn');
+
+        const dashboardLoader = document.getElementById('dashboard-loader');
+        const dashboardContent = document.getElementById('dashboard-content');
+
+        const formatBytes = (b) => {
+            if (!b || b === 0) return '0 B';
+            const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(b) / Math.log(1024));
+            return (b / Math.pow(1024, i)).toFixed(i > 1 ? 1 : 0) + ' ' + u[i];
+        };
+
+        const formatTraffic = (up, down, total_gb) => {
+            const used = up + down;
+            if (total_gb > 0) {
+                const total = total_gb * 1024 * 1024 * 1024;
+                return `${formatBytes(used)} / ${formatBytes(total)}`;
+            }
+            return `${formatBytes(used)}`;
+        };
+
+        const getExpiryInfo = (tsMs) => {
+            if (!tsMs || tsMs === 0) return { text: 'Навсегда', color: 'var(--green)', badge: '', badgeColor: '' };
+            const now = Date.now();
+            if (tsMs < 0) return { text: 'Навсегда', color: 'var(--green)', badge: '', badgeColor: '' };
+
+            const diff = tsMs - now;
+            const days = Math.floor(diff / (86400000));
+            const hours = Math.floor(diff / (3600000));
+            const d = new Date(tsMs);
+            const dateStr = d.toLocaleString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            let badge = '', badgeColor = '', color = 'var(--text-dim)';
+
+            if (diff <= 0) {
+                badge = 'Истёк';
+                badgeColor = 'background: rgba(239,68,68,0.15); color: var(--red);';
+                color = 'var(--red)';
+            } else if (days <= 3) {
+                badge = hours > 24 ? `${days}д` : `${hours}ч`;
+                badgeColor = 'background: rgba(234,179,8,0.15); color: var(--yellow);';
+                color = 'var(--yellow)';
+            } else if (days <= 7) {
+                badge = `${days}д`;
+                badgeColor = 'background: rgba(234,179,8,0.15); color: var(--yellow);';
+                color = 'var(--text-dim)';
+            } else {
+                badge = `${days}д`;
+                badgeColor = 'background: rgba(34,197,94,0.15); color: var(--green);';
+                color = 'var(--text-dim)';
+            }
+
+            return { text: `Истекает: ${dateStr}`, color, badge, badgeColor };
+        };
+
+        const isExpired = (tsMs) => {
+            if (!tsMs || tsMs === 0 || tsMs < 0) return false;
+            return Date.now() > tsMs;
+        };
+
+        const api = async (url, options = {}) => {
+            const res = await fetch(url, options);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Ошибка запроса');
+            return data;
+        };
+
+        const haptic = (type) => {
+            if (tg.HapticFeedback) {
+                if (type === 'success') tg.HapticFeedback.notificationOccurred('success');
+                else if (type === 'error') tg.HapticFeedback.notificationOccurred('error');
+                else tg.HapticFeedback.selectionChanged();
+            }
+        };
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.add('hidden'));
+
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.target).classList.remove('hidden');
+
+                if (btn.dataset.target === 'tab-dashboard') loadDashboard();
+                if (btn.dataset.target === 'tab-clients') loadClients();
+            });
+        });
+
+        durationBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                durationBtns.forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedDaysCreate = parseInt(btn.dataset.days);
+                haptic('selection');
+            });
+        });
+
+        usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') submitBtn.click();
+        });
+
+        submitBtn.addEventListener('click', async () => {
+            const username = usernameInput.value.trim();
+            const errorMsg = document.getElementById('error-message');
+
+            if (!username) {
+                errorMsg.textContent = 'Введите имя';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            errorMsg.classList.add('hidden');
+            submitBtn.disabled = true;
+            document.getElementById('btn-text').classList.add('hidden');
+            document.getElementById('btn-loader').classList.remove('hidden');
+            usernameInput.disabled = true;
+
+            try {
+                const data = await api('/api/add_client', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, days: selectedDaysCreate })
+                });
+
+                if (!data.success) throw new Error(data.message || 'Ошибка серверов');
+
+                document.getElementById('sub-url').value = data.subscription_url;
+                document.getElementById('success-title').textContent = data.message;
+
+                formSection.classList.add('hidden');
+                successSection.classList.remove('hidden');
+                haptic('success');
+
+            } catch (err) {
+                errorMsg.textContent = err.message;
+                errorMsg.classList.remove('hidden');
+                haptic('error');
+            } finally {
+                submitBtn.disabled = false;
+                document.getElementById('btn-text').classList.remove('hidden');
+                document.getElementById('btn-loader').classList.add('hidden');
+                usernameInput.disabled = false;
+            }
+        });
+
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            const url = document.getElementById('sub-url');
+            navigator.clipboard.writeText(url.value).then(() => haptic('selection'));
+        });
+
+        resetCreateBtn.addEventListener('click', () => {
+            successSection.classList.add('hidden');
+            formSection.classList.remove('hidden');
+            usernameInput.value = '';
+        });
+
+        const loadDashboard = async () => {
+            dashboardLoader.classList.remove('hidden');
+            dashboardContent.classList.add('hidden');
+
+            try {
+                const data = await api('/api/dashboard');
+                document.getElementById('stat-total').textContent = data.total_clients;
+                document.getElementById('stat-active').textContent = data.active_clients;
+                document.getElementById('stat-expired').textContent = data.expired_clients;
+                document.getElementById('stat-traffic').innerHTML = `${data.total_traffic_gb} <span class="text-sm font-normal" style="color: var(--text-dim);">GB</span>`;
+
+                const expiringEl = document.getElementById('expiring-soon');
+                const now = Date.now();
+                const soon = allClients
+                    .filter(c => c.expiry_time > 0 && c.expiry_time > now && (c.expiry_time - now) <= 3 * 86400000)
+                    .sort((a, b) => a.expiry_time - b.expiry_time);
+
+                if (soon.length === 0) {
+                    expiringEl.innerHTML = '<p class="text-center py-4 text-xs" style="color: var(--text-dim);">Все подписки в порядке</p>';
+                } else {
+                    const tmpl = document.getElementById('expiring-card-template');
+                    expiringEl.innerHTML = '';
+                    soon.forEach(c => {
+                        const clone = tmpl.content.cloneNode(true);
+                        const info = getExpiryInfo(c.expiry_time);
+                        clone.querySelector('.expiring-name').textContent = c.email;
+                        const badge = clone.querySelector('.expiring-badge');
+                        badge.textContent = info.badge;
+                        badge.setAttribute('style', info.badgeColor);
+                        expiringEl.appendChild(clone);
+                    });
+                }
+
+                dashboardContent.classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+            } finally {
+                dashboardLoader.classList.add('hidden');
+            }
+        };
+
+        const loadClients = async () => {
+            clientsLoader.classList.remove('hidden');
+            clientsContainer.classList.add('hidden');
+            clientsContainer.innerHTML = '';
+
+            try {
+                const clients = await api('/api/clients');
+                allClients = clients;
+                renderClients(clients);
+            } catch (err) {
+                clientsContainer.innerHTML = '<p class="text-center py-4 text-sm" style="color: var(--red);">Ошибка загрузки</p>';
+                clientsContainer.classList.remove('hidden');
+            } finally {
+                clientsLoader.classList.add('hidden');
+            }
+        };
+
+        const renderClients = (clients) => {
+            clientsContainer.innerHTML = '';
+
+            if (clients.length === 0) {
+                clientsContainer.innerHTML = '<p class="text-center py-4 text-xs" style="color: var(--text-dim);">Нет клиентов</p>';
+                clientsContainer.classList.remove('hidden');
+                return;
+            }
+
+            clients.forEach(c => {
+                const clone = clientTemplate.content.cloneNode(true);
+                const card = clone.querySelector('.client-card');
+
+                clone.querySelector('.client-name').textContent = c.email;
+
+                const info = getExpiryInfo(c.expiry_time);
+                clone.querySelector('.client-expiry').textContent = info.text;
+                clone.querySelector('.client-expiry').style.color = info.color;
+
+                const badge = clone.querySelector('.client-expiry-badge');
+                if (info.badge) {
+                    badge.textContent = info.badge;
+                    badge.setAttribute('style', info.badgeColor);
+                } else {
+                    badge.remove();
+                }
+
+                clone.querySelector('.client-traffic').textContent = formatTraffic(c.up, c.down, c.total_gb);
+
+                const toggle = clone.querySelector('.toggle-track');
+                const expired = isExpired(c.expiry_time);
+                if (c.enable && !expired) {
+                    toggle.classList.add('on');
+                }
+
+                toggle.addEventListener('click', async () => {
+                    const newState = !toggle.classList.contains('on');
+                    try {
+                        const data = await api('/api/toggle_client', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ client_uuid: c.id, enable: newState })
+                        });
+                        if (data.success) {
+                            toggle.classList.toggle('on', newState);
+                            haptic('success');
+                        } else {
+                            throw new Error(data.message);
+                        }
+                    } catch (err) {
+                        haptic('error');
+                    }
+                });
+
+                clone.querySelector('.extend-btn').addEventListener('click', () => {
+                    openModal(c.id, c.email);
+                });
+
+                clientsContainer.appendChild(clone);
+            });
+
+            clientsContainer.classList.remove('hidden');
+        };
+
+        searchInput.addEventListener('input', () => {
+            const q = searchInput.value.trim().toLowerCase();
+            if (!q) {
+                renderClients(allClients);
+                return;
+            }
+            const filtered = allClients.filter(c => c.email.toLowerCase().includes(q));
+            renderClients(filtered);
+        });
+
+        refreshBtn.addEventListener('click', () => {
+            haptic('selection');
+            loadClients();
+        });
+
+        const openModal = (uuid, name) => {
+            currentClientUuid = uuid;
+            currentClientName = name;
+            document.getElementById('modal-client-name').innerHTML = `Клиент: <b>${name}</b>`;
+            document.getElementById('modal-title').textContent = 'Управление';
+            document.getElementById('modal-error').classList.add('hidden');
+
+            modalBackdrop.classList.remove('hidden');
+            setTimeout(() => {
+                modalBackdrop.style.opacity = '1';
+                modalSheet.style.transform = 'translateY(0)';
+            }, 10);
+        };
+
+        const closeModal = () => {
+            modalBackdrop.style.opacity = '0';
+            modalSheet.style.transform = 'translateY(100%)';
+            setTimeout(() => {
+                modalBackdrop.classList.add('hidden');
+                currentClientUuid = null;
+                currentClientName = null;
+            }, 250);
+        };
+
+        closeModalBtn.addEventListener('click', closeModal);
+        modalBackdrop.addEventListener('click', (e) => {
+            if (e.target === modalBackdrop) closeModal();
+        });
+
+        modalExtendBtns.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const days = parseInt(btn.dataset.days);
+                const errorEl = document.getElementById('modal-error');
+                errorEl.classList.add('hidden');
+
+                const orig = btn.textContent;
+                btn.textContent = '...';
+                btn.disabled = true;
+
+                try {
+                    const data = await api('/api/update_client', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ client_uuid: currentClientUuid, days })
+                    });
+                    if (!data.success) throw new Error(data.message);
+                    haptic('success');
+                    closeModal();
+                    setTimeout(() => loadClients(), 300);
+                } catch (err) {
+                    errorEl.textContent = err.message;
+                    errorEl.classList.remove('hidden');
+                    haptic('error');
+                } finally {
+                    btn.textContent = orig;
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        modalDeleteBtn.addEventListener('click', async () => {
+            const errorEl = document.getElementById('modal-error');
+            errorEl.classList.add('hidden');
+
+            modalDeleteBtn.textContent = 'Удаление...';
+            modalDeleteBtn.disabled = true;
+
+            try {
+                const data = await api('/api/delete_client', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_uuid: currentClientUuid })
+                });
+                if (!data.success) throw new Error(data.message);
+                haptic('success');
+                closeModal();
+                setTimeout(() => loadClients(), 300);
+            } catch (err) {
+                errorEl.textContent = err.message;
+                errorEl.classList.remove('hidden');
+                haptic('error');
+            } finally {
+                modalDeleteBtn.textContent = 'Удалить клиента';
+                modalDeleteBtn.disabled = false;
+            }
+        });
+
+        loadDashboard();
+    });
+    </script>
+</body>
+</html>

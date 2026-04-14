@@ -1,0 +1,8 @@
+services:
+  x-ui-manager:
+    build: .
+    ports:
+      - "8443:8443"
+    env_file:
+      - .env
+    restart: unless-stopped
