@@ -43,7 +43,7 @@ async def command_start_handler(message: Message) -> None:
 
     # Кнопка открытия Web App
     web_app_btn = InlineKeyboardButton(
-        text="🌐 Управление VPN", web_app=WebAppInfo(url=webapp_url)
+        text="🌐 Управление VPN", web_app=WebAppInfo(url='https://nyxvpnde.port0.org:8442')
     )
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[web_app_btn]])
 
