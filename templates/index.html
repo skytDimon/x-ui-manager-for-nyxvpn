@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>VPN Manager</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -61,16 +61,17 @@
             color: var(--text);
             font-weight: 600;
         }
-        .tab-btn.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 1.5px;
-            background: var(--accent);
-            border-radius: 1px;
-        }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
         .duration-btn {
             background: var(--surface);
@@ -171,13 +172,84 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .expiry-badge {
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-    </style>
+.expiry-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.client-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.client-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.client-card {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.client-name {
+  transition: color 0.2s;
+}
+
+.client-name:hover {
+  color: var(--accent);
+}
+
+.client-avatar {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.modal-sheet {
+  border-radius: 20px 20px 0 0;
+}
+
+.tab-content {
+  transition: opacity 0.2s ease;
+}
+
+.stat-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+}
+
+.btn-accent, .btn-danger, .duration-btn, .tab-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-accent:active, .btn-danger:active, .duration-btn:active {
+  transform: scale(0.97);
+}
+
+.toggle-track {
+  touch-action: none;
+}
+
+body {
+  touch-action: pan-x pan-y;
+}
+
+.client-card, .stat-card, .duration-btn, .btn-accent, .btn-sm, .tab-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.status-dot {
+  flex-shrink: 0;
+}
+
+.stat-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+</style>
 </head>
 <body>
 
@@ -332,14 +404,26 @@
             </div>
             <p class="text-sm" id="modal-client-name" style="color: var(--text-dim);">Клиент: <span>...</span></p>
 
-            <div id="modal-extend-section" class="space-y-3">
-                <p class="text-xs font-medium" style="color: var(--text-dim);">Продлить на</p>
-                <div class="grid grid-cols-3 gap-2">
-                    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="3">+3 дня</button>
-                    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="15">+15 дней</button>
-                    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="30">+30 дней</button>
-                </div>
-            </div>
+<div id="modal-subscription-section" class="p-3 rounded-lg" style="background: var(--surface); border: 1px solid var(--border);">
+  <p class="text-xs font-medium mb-2" style="color: var(--text-dim);">Ссылка подписки</p>
+  <div class="flex items-center gap-2">
+    <input type="text" id="modal-sub-url" readonly class="flex-1 rounded px-2 py-1.5 text-xs truncate" style="background: var(--surface-2); border-color: var(--border);" />
+    <button id="modal-copy-btn" class="p-1.5 rounded transition-colors hover:bg-white/5" style="color: var(--accent);">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<div id="modal-extend-section" class="space-y-3">
+  <p class="text-xs font-medium" style="color: var(--text-dim);">Продлить на</p>
+  <div class="grid grid-cols-3 gap-2">
+    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="3">+3 дня</button>
+    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="15">+15 дней</button>
+    <button class="modal-extend-btn btn-sm btn-accent rounded-lg py-2" data-days="30">+30 дней</button>
+  </div>
+</div>
 
             <div id="modal-delete-section" class="pt-2">
                 <button id="modal-delete-btn" class="btn-sm btn-danger rounded-lg py-2 w-full">Удалить клиента</button>
@@ -349,43 +433,51 @@
         </div>
     </div>
 
-    <template id="client-card-template">
-        <div class="client-card rounded-xl p-4 space-y-3">
-            <div class="flex items-start justify-between">
-                <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                        <span class="font-medium text-sm truncate client-name"></span>
-                        <span class="expiry-badge client-expiry-badge"></span>
-                    </div>
-                    <p class="text-xs mt-1 client-expiry" style="color: var(--text-dim);"></p>
-                </div>
-                <div class="toggle-track ml-3 flex-shrink-0" title="Включить/выключить">
-                    <div class="toggle-thumb"></div>
-                </div>
-            </div>
-            <div class="flex items-center justify-between pt-2" style="border-top: 1px solid var(--border);">
-                <span class="text-xs client-traffic" style="color: var(--text-dim);"></span>
-                <button class="extend-btn btn-sm btn-accent">Продлить</button>
-            </div>
+<template id="client-card-template">
+<div class="client-card rounded-2xl p-4 space-y-3">
+  <div class="flex items-start justify-between">
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+      <div class="client-avatar w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"></div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="font-medium text-sm truncate client-name cursor-pointer" title="Открыть в Telegram"></span>
+          <span class="expiry-badge client-expiry-badge"></span>
         </div>
-    </template>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="status-dot w-1.5 h-1.5 rounded-full"></span>
+          <p class="text-xs client-expiry" style="color: var(--text-dim);"></p>
+        </div>
+      </div>
+    </div>
+    <div class="toggle-track ml-3 flex-shrink-0" title="Включить/выключить">
+      <div class="toggle-thumb"></div>
+    </div>
+  </div>
+  <div class="flex items-center justify-between pt-3" style="border-top: 1px solid var(--border);">
+    <span class="text-xs client-traffic" style="color: var(--text-dim);"></span>
+    <button class="extend-btn btn-sm btn-accent">Продлить</button>
+  </div>
+</div>
+</template>
 
-    <template id="expiring-card-template">
-        <div class="flex items-center justify-between py-2" style="border-bottom: 1px solid var(--border);">
-            <span class="text-sm expiring-name"></span>
-            <span class="expiry-badge expiring-badge"></span>
-        </div>
-    </template>
+<template id="expiring-card-template">
+<div class="flex items-center gap-3 py-2" style="border-bottom: 1px solid var(--border);">
+  <div class="expiring-avatar w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"></div>
+  <span class="text-sm flex-1 expiring-name"></span>
+  <span class="expiry-badge expiring-badge"></span>
+</div>
+</template>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        let selectedDaysCreate = 0;
-        let currentClientUuid = null;
-        let currentClientName = null;
-        let allClients = [];
+let selectedDaysCreate = 0;
+  let currentClientUuid = null;
+  let currentClientName = null;
+  let currentClientSubUrl = null;
+  let allClients = [];
 
         const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
@@ -412,7 +504,31 @@
         const dashboardLoader = document.getElementById('dashboard-loader');
         const dashboardContent = document.getElementById('dashboard-content');
 
-        const formatBytes = (b) => {
+        const getAvatarColor = (name) => {
+  const colors = [
+    '#4f8cff', '#22c55e', '#eab308', '#ef4444', '#8b5cf6',
+    '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#a855f7'
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
+const getInitials = (name) => {
+  if (!name) return '?';
+  return name.charAt(0).toUpperCase();
+};
+
+const openTelegram = (username) => {
+  const cleanUsername = username.replace(/[^a-zA-Z0-9_]/g, '');
+  if (cleanUsername) {
+    window.location.href = `tg://resolve?domain=${cleanUsername}`;
+  }
+};
+
+const formatBytes = (b) => {
             if (!b || b === 0) return '0 B';
             const u = ['B', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(b) / Math.log(1024));
@@ -585,15 +701,19 @@
                 } else {
                     const tmpl = document.getElementById('expiring-card-template');
                     expiringEl.innerHTML = '';
-                    soon.forEach(c => {
-                        const clone = tmpl.content.cloneNode(true);
-                        const info = getExpiryInfo(c.expiry_time);
-                        clone.querySelector('.expiring-name').textContent = c.email;
-                        const badge = clone.querySelector('.expiring-badge');
-                        badge.textContent = info.badge;
-                        badge.setAttribute('style', info.badgeColor);
-                        expiringEl.appendChild(clone);
-                    });
+soon.forEach(c => {
+  const clone = tmpl.content.cloneNode(true);
+  const info = getExpiryInfo(c.expiry_time);
+  clone.querySelector('.expiring-name').textContent = c.email;
+  const avatar = clone.querySelector('.expiring-avatar');
+  avatar.textContent = getInitials(c.email);
+  avatar.style.background = getAvatarColor(c.email);
+  avatar.style.color = '#fff';
+  const badge = clone.querySelector('.expiring-badge');
+  badge.textContent = info.badge;
+  badge.setAttribute('style', info.badgeColor);
+  expiringEl.appendChild(clone);
+});
                 }
 
                 dashboardContent.classList.remove('hidden');
@@ -630,15 +750,26 @@
                 return;
             }
 
-            clients.forEach(c => {
-                const clone = clientTemplate.content.cloneNode(true);
-                const card = clone.querySelector('.client-card');
+clients.forEach(c => {
+  const clone = clientTemplate.content.cloneNode(true);
+  const card = clone.querySelector('.client-card');
 
-                clone.querySelector('.client-name').textContent = c.email;
+  const nameEl = clone.querySelector('.client-name');
+  nameEl.textContent = c.email;
+  nameEl.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openTelegram(c.email);
+    haptic('selection');
+  });
 
-                const info = getExpiryInfo(c.expiry_time);
-                clone.querySelector('.client-expiry').textContent = info.text;
-                clone.querySelector('.client-expiry').style.color = info.color;
+  const avatar = clone.querySelector('.client-avatar');
+  avatar.textContent = getInitials(c.email);
+  avatar.style.background = getAvatarColor(c.email);
+  avatar.style.color = '#fff';
+
+  const info = getExpiryInfo(c.expiry_time);
+  clone.querySelector('.client-expiry').textContent = info.text;
+  clone.querySelector('.client-expiry').style.color = info.color;
 
                 const badge = clone.querySelector('.client-expiry-badge');
                 if (info.badge) {
@@ -650,11 +781,15 @@
 
                 clone.querySelector('.client-traffic').textContent = formatTraffic(c.up, c.down, c.total_gb);
 
-                const toggle = clone.querySelector('.toggle-track');
-                const expired = isExpired(c.expiry_time);
-                if (c.enable && !expired) {
-                    toggle.classList.add('on');
-                }
+const toggle = clone.querySelector('.toggle-track');
+  const statusDot = clone.querySelector('.status-dot');
+  const expired = isExpired(c.expiry_time);
+  if (c.enable && !expired) {
+    toggle.classList.add('on');
+    statusDot.style.background = 'var(--green)';
+  } else {
+    statusDot.style.background = 'var(--red)';
+  }
 
                 toggle.addEventListener('click', async () => {
                     const newState = !toggle.classList.contains('on');
@@ -675,9 +810,9 @@
                     }
                 });
 
-                clone.querySelector('.extend-btn').addEventListener('click', () => {
-                    openModal(c.id, c.email);
-                });
+clone.querySelector('.extend-btn').addEventListener('click', () => {
+  openModal(c.id, c.email, c.subscription_url);
+});
 
                 clientsContainer.appendChild(clone);
             });
@@ -700,34 +835,44 @@
             loadClients();
         });
 
-        const openModal = (uuid, name) => {
-            currentClientUuid = uuid;
-            currentClientName = name;
-            document.getElementById('modal-client-name').innerHTML = `Клиент: <b>${name}</b>`;
-            document.getElementById('modal-title').textContent = 'Управление';
-            document.getElementById('modal-error').classList.add('hidden');
+const openModal = (uuid, name, subUrl) => {
+  currentClientUuid = uuid;
+  currentClientName = name;
+  currentClientSubUrl = subUrl || '';
+  document.getElementById('modal-client-name').innerHTML = `Клиент: <b>${name}</b>`;
+  document.getElementById('modal-title').textContent = 'Управление';
+  document.getElementById('modal-error').classList.add('hidden');
+  document.getElementById('modal-sub-url').value = currentClientSubUrl;
 
-            modalBackdrop.classList.remove('hidden');
-            setTimeout(() => {
-                modalBackdrop.style.opacity = '1';
-                modalSheet.style.transform = 'translateY(0)';
-            }, 10);
-        };
+  modalBackdrop.classList.remove('hidden');
+  setTimeout(() => {
+    modalBackdrop.style.opacity = '1';
+    modalSheet.style.transform = 'translateY(0)';
+  }, 10);
+};
 
-        const closeModal = () => {
-            modalBackdrop.style.opacity = '0';
-            modalSheet.style.transform = 'translateY(100%)';
-            setTimeout(() => {
-                modalBackdrop.classList.add('hidden');
-                currentClientUuid = null;
-                currentClientName = null;
-            }, 250);
-        };
+const closeModal = () => {
+  modalBackdrop.style.opacity = '0';
+  modalSheet.style.transform = 'translateY(100%)';
+  setTimeout(() => {
+    modalBackdrop.classList.add('hidden');
+    currentClientUuid = null;
+    currentClientName = null;
+    currentClientSubUrl = null;
+  }, 250);
+};
 
-        closeModalBtn.addEventListener('click', closeModal);
-        modalBackdrop.addEventListener('click', (e) => {
-            if (e.target === modalBackdrop) closeModal();
-        });
+closeModalBtn.addEventListener('click', closeModal);
+modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === modalBackdrop) closeModal();
+});
+
+document.getElementById('modal-copy-btn').addEventListener('click', () => {
+  const url = document.getElementById('modal-sub-url').value;
+  if (url) {
+    navigator.clipboard.writeText(url).then(() => haptic('selection'));
+  }
+});
 
         modalExtendBtns.forEach(btn => {
             btn.addEventListener('click', async () => {

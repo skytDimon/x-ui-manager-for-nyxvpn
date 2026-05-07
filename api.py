@@ -67,6 +67,7 @@ class ClientInfoModel(BaseModel):
     id: str
     email: str
     sub_id: str
+    subscription_url: str
     expiry_time: int
     enable: bool
     total_gb: int
@@ -261,6 +262,7 @@ async def get_clients():
                     id=c.id,
                     email=c.email,
                     sub_id=c.sub_id,
+                    subscription_url=f"{config.subscription_base_url}/{c.sub_id}",
                     expiry_time=c.expiry_time,
                     enable=c.enable,
                     total_gb=c.total_gb,
