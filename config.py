@@ -27,6 +27,7 @@ class AppConfig:
 
     bot_token: str
     admin_id: int
+    api_key: str
     webapp_url: str
     webapp_host: str
     webapp_port: int
@@ -41,6 +42,7 @@ def load_config() -> AppConfig:
     webapp_url = os.getenv("WEBAPP_URL", "https://nyxvpnde.port0.org:8442")
     webapp_host = os.getenv("WEBAPP_HOST", "0.0.0.0")
     webapp_port = int(os.getenv("WEBAPP_PORT", "3000"))
+    api_key = os.getenv("API_KEY", "")
     subscription_base_url = os.getenv(
         "SUBSCRIPTION_BASE_URL", "https://nyxvpnnl.home.kg:15498/sub"
     )
@@ -65,6 +67,7 @@ def load_config() -> AppConfig:
     return AppConfig(
         bot_token=bot_token,
         admin_id=admin_id,
+        api_key=api_key,
         webapp_url=webapp_url,
         webapp_host=webapp_host,
         webapp_port=webapp_port,
