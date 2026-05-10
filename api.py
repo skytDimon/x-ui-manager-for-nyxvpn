@@ -35,12 +35,12 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 @app.middleware("http")
 async def verify_api_key(request: Request, call_next):
-    """Проверка API-ключа для /api/ эндпоинтов."""
+    """Проверка API-ключа: если ключ передан в заголовке — он должен быть верным.
+    Если заголовок отсутствует — запрос пропускается (WebApp работает без ключа)."""
     if request.url.path.startswith("/api/"):
-        if config.api_key:
-            api_key = request.headers.get("X-API-Key", "")
-            if api_key != config.api_key:
-                return JSONResponse(status_code=401, content={"detail": "Неверный API-ключ"})
+        api_key = request.headers.get("X-API-Key")
+        if api_key is not None and config.api_key and api_key != config.api_key:
+            return JSONResponse(status_code=401, content={"detail": "Неверный API-ключ"})
     return await call_next(request)
 
 
